@@ -1,2 +1,2 @@
 # CSC126Midterms
-e. Motion and Object Tracking
+Manusl for the intruder system supposedely 
