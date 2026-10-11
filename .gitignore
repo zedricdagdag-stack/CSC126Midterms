@@ -223,4 +223,5 @@ __marimo__/
 .venv*/
 faces/
 model.yml
+names.jsonmodel.yml
 names.json
