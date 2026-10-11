@@ -219,3 +219,8 @@ __marimo__/
 
 # Streamlit
 .streamlit/secrets.toml
+
+.venv*/
+faces/
+model.yml
+names.json
