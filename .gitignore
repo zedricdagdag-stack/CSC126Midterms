@@ -225,3 +225,13 @@ faces/
 model.yml
 names.jsonmodel.yml
 names.json
+snapshots/
+events.log
+.venv/
+__pycache__/
+faces/
+snapshots/
+events.log
+model.yml
+names.json
+models/lbfmodel.yaml
