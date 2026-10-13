@@ -196,7 +196,7 @@ python register_face.py
 Type a name, then follow the on-screen steps. Press **SPACE** to start each one.
 
 | Step | What to do |
-|---|---|
+|---|--- |
 | 1 | Look straight at the camera |
 | 2 | Turn a little toward the **left of the screen** |
 | 3 | Turn a little toward the **right of the screen** |
