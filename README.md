@@ -20,21 +20,27 @@
 
 ## 📑 Table of Contents
 
-- [Features](#-features)
-- [Quick Start](#-quick-start)
-- [How It Works](#-how-it-works)
-- [Decision Logic](#-decision-logic)
-- [Lab Topics Covered](#-lab-topics-covered)
-- [Project Structure](#-project-structure)
-- [Installation](#-installation)
-- [Usage](#-usage)
-- [Calibrating Recognition](#-calibrating-recognition)
-- [Configuration](#-configuration)
-- [Results](#-results)
-- [Troubleshooting](#-troubleshooting)
-- [Limitations](#-limitations)
-- [Future Improvements](#-future-improvements)
-- [Team](#-team)
+- [🛡️ Home Protection System](#️-home-protection-system)
+    - [Motion Tracking + Face Recognition with Classical OpenCV](#motion-tracking--face-recognition-with-classical-opencv)
+  - [📑 Table of Contents](#-table-of-contents)
+  - [✨ Features](#-features)
+  - [⚡ Quick Start](#-quick-start)
+  - [🔍 How It Works](#-how-it-works)
+  - [🧠 Decision Logic](#-decision-logic)
+  - [📚 Lab Topics Covered](#-lab-topics-covered)
+  - [📁 Project Structure](#-project-structure)
+  - [🔧 Installation](#-installation)
+  - [🚀 Usage](#-usage)
+    - [1️⃣ Register a resident](#1️⃣-register-a-resident)
+    - [2️⃣ Train the recognizer](#2️⃣-train-the-recognizer)
+    - [3️⃣ Arm the alarm](#3️⃣-arm-the-alarm)
+  - [🎯 Calibrating Recognition](#-calibrating-recognition)
+  - [🧰 Configuration](#-configuration)
+  - [📸 Results](#-results)
+  - [🩹 Troubleshooting](#-troubleshooting)
+  - [🚧 Limitations](#-limitations)
+  - [🔮 Future Improvements](#-future-improvements)
+  - [👥 Team](#-team)
 
 ---
 
@@ -128,7 +134,6 @@ CSC126Midterms/
 ├── main.py             # the alarm: motion tracking + recognition + alarm
 ├── register_face.py    # Step 1: guided face registration
 ├── train.py            # Step 2: train the LBPH model
-├── recognize.py        # simple recognition demo (no motion tracking)
 ├── facelib.py          # shared detection, filtering and preprocessing
 ├── requirements.txt
 ├── models/

@@ -5,7 +5,13 @@ if not os.path.isdir("faces"):
     print("No faces/ folder found. Run register_face.py first.")
     exit()
 
-recognizer = cv2.face.LBPHFaceRecognizer_create()
+# Tuned LBPH Recognizer with denser grid and sampling parameters
+recognizer = cv2.face.LBPHFaceRecognizer_create(
+    radius=1,
+    neighbors=8,
+    grid_x=8,
+    grid_y=8
+)
 images, labels, names = [], [], {}
 
 # Each person's folder in faces/ becomes one label

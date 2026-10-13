@@ -18,10 +18,10 @@ def load_detector():
     return detector
 
 
-# Detection filters (tune these; press 'd' in main.py to see the numbers live)
-MIN_CONF = 2.0    # Haar confidence: real faces score high, curtain folds/blankets low
-MIN_STD = 30      # pixel contrast inside the box: flat walls/curtains score low
-RELAXED_CONF = 1.5   # looser confidence, used by register_face.py so slightly turned/tilted faces are still found
+# Detection filters (tuned for higher strictness to reject false positives)
+MIN_CONF = 2.5       # Increased confidence requirement for Haar Cascade
+MIN_STD = 45         # Increased pixel contrast threshold (rejects flat walls/curtains)
+RELAXED_CONF = 1.5   # Looser confidence used by register_face.py
 
 # (rect, confidence, contrast, accepted) for every candidate in the latest call
 last_candidates = []
@@ -47,8 +47,6 @@ def _get_eye_detector():
 
 
 def _count_eyes(eq, rect):
-    """Eyes found in the upper part of the face box; -1 if no eye cascade is available.
-    A curtain fold or blanket has no eyes, a real face does."""
     det = _get_eye_detector()
     if det is None:
         return -1
@@ -60,8 +58,6 @@ def _count_eyes(eq, rect):
 
 
 def detect_faces(detector, gray, relaxed=False):
-    """Finds faces, then throws away candidates that are low-confidence or
-    nearly flat (curtains, blankets, walls). Returns a list of (x, y, w, h)."""
     global last_candidates
     neighbors = 3 if relaxed else 6
     min_conf = RELAXED_CONF if relaxed else MIN_CONF
@@ -73,7 +69,6 @@ def detect_faces(detector, gray, relaxed=False):
         )
         weights = [float(w) for w in np.ravel(weights)]
     except (cv2.error, TypeError):
-        # Fallback if this OpenCV build can't return confidences
         rects = detector.detectMultiScale(
             eq, scaleFactor=1.1, minNeighbors=neighbors, minSize=(100, 100)
         )
@@ -85,7 +80,7 @@ def detect_faces(detector, gray, relaxed=False):
         contrast = float(cv2.meanStdDev(gray[y:y + h, x:x + w])[1][0][0])
         ok = conf >= min_conf and contrast >= MIN_STD
         eyes = -1
-        if ok and not relaxed:       # registration relaxes this; landmarks check it there
+        if ok and not relaxed:
             eyes = _count_eyes(eq, (x, y, w, h))
             ok = eyes != 0
         candidates.append(((x, y, w, h), conf, contrast, eyes, ok))
@@ -96,10 +91,6 @@ def detect_faces(detector, gray, relaxed=False):
 
 
 def _clean(faces):
-    """Haar often returns several boxes for one face (nested/overlapping), plus
-    the odd small false positive. Keep the biggest box per face, drop boxes whose
-    center sits inside an already-kept box, and drop boxes much smaller than the
-    biggest one."""
     if len(faces) == 0:
         return []
     faces = sorted((tuple(int(v) for v in f) for f in faces),
@@ -118,8 +109,6 @@ def _clean(faces):
 
 
 def preprocess_face(gray, rect):
-    """Crop to the face, trim background/hair at the edges, resize, and
-    normalize lighting with CLAHE. Returns a 200x200 grayscale image."""
     x, y, w, h = rect
     dx, dy = int(0.10 * w), int(0.05 * h)
     crop = gray[y + dy:y + h - dy, x + dx:x + w - dx]
@@ -127,13 +116,10 @@ def preprocess_face(gray, rect):
     return _clahe.apply(crop)
 
 
-# ---------------- Facial landmarks (eyes, nose, mouth) ----------------
-# Needs models/lbfmodel.yaml (OpenCV Facemark LBF, 68 points) and opencv-contrib-python.
 LBF_MODEL = os.path.join(BASE, "models", "lbfmodel.yaml")
 
 
 def load_landmarker():
-    """Returns the landmark model, or None if the model file / cv2.face is missing."""
     if not os.path.exists(LBF_MODEL) or not hasattr(cv2, "face"):
         return None
     try:
@@ -145,7 +131,6 @@ def load_landmarker():
 
 
 def get_landmarks(facemark, gray, rect):
-    """68 (x, y) points for the face in rect, or None if the fit failed."""
     x, y, w, h = rect
     faces = np.array([[x, y, w, h]], dtype=np.int32)
     ok, landmarks = facemark.fit(gray, faces)
@@ -155,17 +140,14 @@ def get_landmarks(facemark, gray, rect):
 
 
 def _eye_aspect_ratio(p):
-    """Eye openness from its 6 points: about 0.25-0.35 open, below 0.15 closed."""
     return (np.linalg.norm(p[1] - p[5]) + np.linalg.norm(p[2] - p[4])) / (
         2.0 * np.linalg.norm(p[0] - p[3]))
 
 
 def face_features(pts, rect=None):
-    """Measurements from the landmarks, or None if the fit looks implausible
-    (eyes must be above the nose, the nose above the mouth, eye spacing sensible)."""
     if pts is None or len(pts) != 68:
         return None
-    right_eye = pts[36:42].mean(axis=0)     # subject's right eye (left side of image)
+    right_eye = pts[36:42].mean(axis=0)
     left_eye = pts[42:48].mean(axis=0)
     nose_tip = pts[30]
     mouth = pts[48:60].mean(axis=0)
@@ -178,9 +160,7 @@ def face_features(pts, rect=None):
     return {
         "roll": float(np.degrees(np.arctan2(left_eye[1] - right_eye[1],
                                             left_eye[0] - right_eye[0]))),
-        # yaw: nose tip offset from between the eyes (negative = toward screen-left)
         "yaw": float((nose_tip[0] - eye_mid[0]) / eye_dist),
-        # pitch: nose tip position between eye line and mouth (smaller = chin up)
         "pitch": float((nose_tip[1] - eye_mid[1]) / (mouth[1] - eye_mid[1])),
         "ear": float(min(_eye_aspect_ratio(pts[36:42]), _eye_aspect_ratio(pts[42:48]))),
         "mouth_open": float((pts[66][1] - pts[62][1]) / eye_dist),
@@ -189,7 +169,6 @@ def face_features(pts, rect=None):
 
 
 def draw_features(frame, pts):
-    """Outline eyes (cyan), nose (yellow) and mouth (magenta) on the frame."""
     p = pts.astype(np.int32)
     groups = [
         (range(36, 42), True, (255, 255, 0)), (range(42, 48), True, (255, 255, 0)),

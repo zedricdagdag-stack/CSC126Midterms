@@ -12,17 +12,17 @@ try:
 except ImportError:
     winsound = None
 
-# ---------------- Settings (tune these) ----------------
+# ---------------- Settings (tuned for improved stability) ----------------
 SOURCE = 0               # 0 = webcam; or a video path like "samples/test.mp4"
 THRESHOLD = 70           # LBPH distance: lower = better match
-MIN_MOTION_AREA = 1500   # ignore small motion blobs (noise)
+MIN_MOTION_AREA = 2500   # increased to ignore small noise blobs
 ACTIVE_HOLD = 5          # seconds to keep scanning faces after motion stops
 INTRUDER_FRAMES = 5      # consecutive frames a stranger must be seen before alarm
 ALARM_COOLDOWN = 10      # seconds between alarms
 BANNER_TIME = 3          # seconds the red banner stays up
 
 # Tracking settings
-MAX_MISSED = 15          # frames a track survives without a matching blob
+MAX_MISSED = 25          # increased frames a track survives without a matching blob
 MAX_MATCH_DIST = 120     # max pixels a blob can move between frames and keep its ID
 TRAIL_LEN = 40           # number of past positions kept for the motion trail
 
@@ -30,8 +30,8 @@ TRAIL_LEN = 40           # number of past positions kept for the motion trail
 FACE_MOTION_MARGIN = 0.25  # grow each motion box by this fraction when checking
 CONFIRM_HOLD = 4           # seconds a validated face keeps counting after it stops moving
 CONFIRM_DIST = 80          # px: how close a face must stay to its earlier spot
-REQUIRE_MOTION_FOR_FACE = False   # True = only accept faces on moving objects (a still person is then ignored)
-# --------------------------------------------------------
+REQUIRE_MOTION_FOR_FACE = True   # Enabled: only accept faces on moving objects
+# -------------------------------------------------------------------------
 
 BASE = os.path.dirname(os.path.abspath(__file__))
 SNAP_DIR = os.path.join(BASE, "snapshots")
@@ -98,7 +98,6 @@ class CentroidTracker:
         self.next_id += 1
 
     def update(self, rects):
-        # No detections: age every track, drop the ones missing too long
         if len(rects) == 0:
             for tid in list(self.tracks):
                 self.tracks[tid]["missed"] += 1
@@ -109,7 +108,6 @@ class CentroidTracker:
 
         centroids = np.array([(x + w // 2, y + h // 2) for x, y, w, h in rects])
 
-        # No existing tracks: register everything
         if not self.tracks:
             for r, c in zip(rects, centroids):
                 self._register(r, (int(c[0]), int(c[1])))
@@ -117,10 +115,8 @@ class CentroidTracker:
 
         ids = list(self.tracks)
         old = np.array([self.tracks[i]["centroid"] for i in ids])
-        # Distance matrix: rows = existing tracks, cols = new blobs
         D = np.linalg.norm(old[:, None, :] - centroids[None, :, :], axis=2)
 
-        # Greedy matching, closest pairs first
         rows = D.min(axis=1).argsort()
         cols = D.argmin(axis=1)[rows]
         used_rows, used_cols = set(), set()
@@ -135,7 +131,6 @@ class CentroidTracker:
             used_rows.add(r)
             used_cols.add(c)
 
-        # Tracks with no match: age them
         for r in set(range(len(ids))) - used_rows:
             tid = ids[r]
             self.tracks[tid]["missed"] += 1
@@ -143,19 +138,16 @@ class CentroidTracker:
                 log_event(f"TRACK: object #{tid} left the scene")
                 del self.tracks[tid]
 
-        # Blobs with no track: new objects
         for c in set(range(len(rects))) - used_cols:
             self._register(rects[c], (int(centroids[c][0]), int(centroids[c][1])))
 
     def assign_face(self, face_center, status):
-        """Attach a recognition result to the track whose box contains the face."""
         fx, fy = face_center
         for t in self.tracks.values():
             if t["missed"] > 0:
                 continue
             x, y, w, h = t["rect"]
             if x <= fx <= x + w and y <= fy <= y + h:
-                # Once flagged as an intruder, keep that status unless a match overrides it
                 t["status"] = status
 
 
@@ -165,11 +157,11 @@ def draw_tracks(frame, tracker, show_trails):
             continue
         status = t["status"]
         if status is None:
-            color, label = (0, 255, 255), f"ID {tid}"                 # yellow = unidentified
+            color, label = (0, 255, 255), f"ID {tid}"
         elif status == "intruder":
-            color, label = (0, 0, 255), f"ID {tid} INTRUDER"          # red
+            color, label = (0, 0, 255), f"ID {tid} INTRUDER"
         else:
-            color, label = (0, 255, 0), f"ID {tid} {status}"          # green
+            color, label = (0, 255, 0), f"ID {tid} {status}"
 
         x, y, w, h = t["rect"]
         cv2.rectangle(frame, (x, y), (x + w, y + h), color, 2)
@@ -180,14 +172,11 @@ def draw_tracks(frame, tracker, show_trails):
         if show_trails:
             pts = list(t["trail"])
             for i in range(1, len(pts)):
-                thickness = max(1, int(3 * i / len(pts)))   # newer = thicker
+                thickness = max(1, int(3 * i / len(pts)))
                 cv2.line(frame, pts[i - 1], pts[i], color, thickness)
 
 
 def face_is_valid(rect, now):
-    """Reject faces that are not on anything moving (curtain folds, posters, etc.).
-    A face counts if its center is inside a motion track, or right where a
-    validated face was a moment ago (someone who stopped to stand still)."""
     x, y, w, h = rect
     cx, cy = x + w // 2, y + h // 2
     for t in tracker.tracks.values():
@@ -202,7 +191,6 @@ def face_is_valid(rect, now):
 
 
 def update_confirmed(valid_faces, now):
-    """Remember where validated faces are; keep older spots until they expire."""
     new = [(x + w // 2, y + h // 2, now) for (x, y, w, h) in valid_faces]
     keep = [f for f in confirmed_faces if now - f[2] < CONFIRM_HOLD
             and not any(abs(f[0] - n[0]) < CONFIRM_DIST and abs(f[1] - n[1]) < CONFIRM_DIST
@@ -223,11 +211,11 @@ last_motion = 0
 intruder_streak = 0
 last_alarm = 0
 banner_until = 0
-last_logged = {}         # name -> last time we logged them
+last_logged = {}
 show_mask = False
 show_trails = True
 show_debug = False
-confirmed_faces = []   # (cx, cy, last_seen) of faces that passed the motion check
+confirmed_faces = []
 
 log_event("System started")
 
@@ -238,7 +226,6 @@ while True:
     now = time.time()
     frame = cv2.resize(frame, (640, 480))
 
-    # --- Image operations + motion detection ---
     gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
     blur = cv2.GaussianBlur(gray, (21, 21), 0)
     mask = subtractor.apply(blur)
@@ -253,12 +240,9 @@ while True:
             last_motion = now
             motion_rects.append(cv2.boundingRect(c))
 
-    # --- Object tracking: persistent IDs across frames ---
     tracker.update(motion_rects)
-
     active = (now - last_motion) < ACTIVE_HOLD
 
-    # --- Face detection + recognition (only after motion) ---
     intruder_now = False
     face_results = []
     if active:
@@ -285,22 +269,19 @@ while True:
 
             face_results.append(((x, y, w, h), text, color))
 
-    # --- Draw tracks first, then face boxes on top ---
     draw_tracks(frame, tracker, show_trails)
     for (x, y, w, h), text, color in face_results:
         cv2.rectangle(frame, (x, y), (x + w, y + h), color, 2)
         cv2.putText(frame, text, (x, y + h + 22),
                     cv2.FONT_HERSHEY_SIMPLEX, 0.7, color, 2)
 
-    # --- Debug overlay (press d): every candidate with confidence (c), contrast (s), eyes found (e) ---
     if show_debug and active:
         for (x, y, w, h), conf, contrast, eyes, ok in facelib.last_candidates:
-            dbg_color = (255, 255, 0) if ok else (160, 160, 160)   # cyan = kept, gray = rejected
+            dbg_color = (255, 255, 0) if ok else (160, 160, 160)
             cv2.rectangle(frame, (x, y), (x + w, y + h), dbg_color, 1)
             cv2.putText(frame, f"c{conf:.1f} s{contrast:.0f} e{eyes if eyes >= 0 else '-'}", (x, y + 14),
                         cv2.FONT_HERSHEY_SIMPLEX, 0.45, dbg_color, 1)
 
-    # --- Alarm logic: stranger must persist for several frames ---
     intruder_streak = intruder_streak + 1 if intruder_now else 0
     if intruder_streak >= INTRUDER_FRAMES and now - last_alarm > ALARM_COOLDOWN:
         last_alarm = now
@@ -311,13 +292,12 @@ while True:
         cv2.imwrite(snap, frame)
         log_event(f"INTRUDER ALERT - snapshot saved: {os.path.basename(snap)}")
 
-    # --- On-screen status ---
     visible = sum(1 for t in tracker.tracks.values() if t["missed"] == 0)
     status = "SCANNING FACES" if active else "ARMED - monitoring"
     cv2.putText(frame, f"{status} | tracking: {visible}", (10, 470),
                 cv2.FONT_HERSHEY_SIMPLEX, 0.6, (255, 255, 255), 2)
 
-    if now < banner_until and int(now * 4) % 2 == 0:   # flashing banner
+    if now < banner_until and int(now * 4) % 2 == 0:
         cv2.rectangle(frame, (0, 0), (640, 50), (0, 0, 255), -1)
         cv2.putText(frame, "INTRUDER ALERT!", (150, 35),
                     cv2.FONT_HERSHEY_SIMPLEX, 1, (255, 255, 255), 3)
