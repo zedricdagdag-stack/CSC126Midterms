@@ -277,7 +277,7 @@ All settings are constants at the top of the files.
 | Setting | Default | Meaning |
 |---|---|---|
 | `SOURCE` | `0` | `0` = webcam, or a video file path |
-| `THRESHOLD` | `70` | Max LBPH distance counted as a resident |
+| `THRESHOLD` | `45` | Max LBPH distance counted as a resident |
 | `MIN_MOTION_AREA` | `1500` | Ignore motion blobs smaller than this (pixels) |
 | `ACTIVE_HOLD` | `5` s | How long faces keep being scanned after motion stops |
 | `INTRUDER_FRAMES` | `5` | Frames a stranger must be seen before the alarm fires |
@@ -303,7 +303,8 @@ All settings are constants at the top of the files.
 
 | 🟢 Resident recognized | 🔴 Intruder alarm | 🌫️ Motion mask |
 |:---:|:---:|:---:|
-| _add screenshot_ | _add screenshot_ | _add screenshot_ |
+| <img src="screenshots\Screenshot (150).png" width="250"> | _add screenshot_ | _add screenshot_ |
+| ![Recognized resident screenshot](screenshots/Screenshot%20(150).png) | _add screenshot_ | _add screenshot_ |
 | Green box with name | Red box and banner | Segmentation output |
 
 To add images: put them in `screenshots/` and replace the placeholders with `<img src="screenshots/your-image.png" width="250">`.
@@ -368,11 +369,11 @@ To add images: put them in `screenshots/` and replace the placeholders with `<im
 
 | Name | Role |
 |---|---|
-| Member 1 | Developer |
-| Member 2 | Developer |
-| Member 3 | Documentation |
+| Cabatana | Developer |
+| Dagdag | Developer |
+| Apit | Documentation |
 
-**Course:** CSC 126 Computer Vision · **Instructor:** _add name_ · **School:** _add school_
+**Course:** CSC 126 Computer Vision · **Instructor:** Josh Tubo · **School:** Caraga State University
 
 <div align="center">
 
