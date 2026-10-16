@@ -303,7 +303,7 @@ All settings are constants at the top of the files.
 
 | 🟢 Resident recognized | 🔴 Intruder alarm | 🌫️ Motion mask |
 |:---:|:---:|:---:|
-| <img src="screenshots\Screenshot (150).png" width="250"> | <img src="screenshots\intruder_20261014_150958.jpg" width="250"> | _add screenshot_ |
+| <img src="screenshots\Screenshot (150).png" width="250"> | <img src="screenshots\intruder_20261014_150958.jpg" width="250"> | <img src="screenshots\Screenshot 2026-10-16 115549.png" width="250"> |
 | Green box with name | Red box and banner | Segmentation output |
 
 To add images: put them in `screenshots/` and replace the placeholders with `<img src="screenshots/your-image.png" width="250">`.
