@@ -14,7 +14,7 @@ except ImportError:
 
 # ---------------- Settings (tuned for improved stability) ----------------
 SOURCE = 0               # 0 = webcam; or a video path like "samples/test.mp4"
-THRESHOLD = 70           # LBPH distance: lower = better match
+THRESHOLD = 50           # LBPH distance: lower = better match
 MIN_MOTION_AREA = 2500   # increased to ignore small noise blobs
 ACTIVE_HOLD = 5          # seconds to keep scanning faces after motion stops
 INTRUDER_FRAMES = 5      # consecutive frames a stranger must be seen before alarm
